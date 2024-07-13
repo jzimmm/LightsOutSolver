@@ -526,12 +526,12 @@ LRESULT CALLBACK MainWindow::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPA
 
             case WM_CTLCOLORSTATIC:
             {
-
                 if ((HWND)lParam == GetDlgItem(hwnd, BTN_LIGHTS_ON))
                 {
                     return (LRESULT)CreateSolidBrush(RGB(33, 33, 33));
                 }
             }
+            break;
             case WM_PAINT:
             {
                 PAINTSTRUCT ps;
