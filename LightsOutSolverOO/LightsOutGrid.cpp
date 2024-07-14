@@ -20,7 +20,7 @@ LightsOutGrid::~LightsOutGrid() {
 }
 
 void LightsOutGrid::initializeButtonOnArr() {
-	m_buttonOnArr = new int[m_size] { false };
+	m_buttonOnArr = (int*)calloc(m_size, sizeof(int));
 }
 
 void LightsOutGrid::initializeButtonPosArr() {
@@ -31,11 +31,11 @@ void LightsOutGrid::initializeButtonPosArr() {
 	float rowTop = rowTopStart;
 	float columnLeft = columnLeftStart;
 
-	float** tempArr = (float**)calloc(m_size, sizeof(float*));
+	float** tempArr = (float**)malloc(m_size * sizeof(float*));
 	for (int i = 0; i < m_n; i++) {
 		for (int j = 0; j < m_n; j++) {
 			int arrIndex = (i * m_n) + j;
-			tempArr[arrIndex] = (float*)calloc(4, sizeof(float));
+			tempArr[arrIndex] = (float*)malloc(4 * sizeof(float));
 			float buttonX = columnLeft;
 			float buttonY = rowTop;
 			for (int k = 0; k < 4; k++) {
@@ -67,13 +67,13 @@ void LightsOutGrid::clearGrid() {
 }
 
 int* LightsOutGrid::getButtonOnArrByVal() {
-	int* result = (int*)calloc(m_size, sizeof(int));
+	int* result = (int*)malloc(m_size * sizeof(int));
 	memcpy_s(result, sizeof(int) * m_size, m_buttonOnArr, sizeof(int) * m_size);
 	return result;
 }
 
 int* LightsOutGrid::getButtonOnArrByValInver() {
-	int* result = (int*)calloc(m_size, sizeof(int));
+	int* result = (int*)malloc(m_size * sizeof(int));
 	for (int i = 0; i < m_size; i++) {
 		result[i] = !m_buttonOnArr[i];
 	}

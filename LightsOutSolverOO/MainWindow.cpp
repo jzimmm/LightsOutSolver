@@ -271,7 +271,7 @@ HRESULT MainWindow::OnRender(const PAINTSTRUCT &ps)
             4.f
         );
 
-        D2D1_ROUNDED_RECT* buttonArr = (D2D1_ROUNDED_RECT*)calloc(m_lightsOutGrid->m_size, sizeof(D2D1_ROUNDED_RECT));
+        D2D1_ROUNDED_RECT* buttonArr = (D2D1_ROUNDED_RECT*)malloc(m_lightsOutGrid->m_size * sizeof(D2D1_ROUNDED_RECT));
 
         for (int i = 0; i < m_lightsOutGrid->m_size; i++) 
         {
@@ -300,7 +300,7 @@ HRESULT MainWindow::OnRender(const PAINTSTRUCT &ps)
 
         if (m_displaySolution)
         {
-            solutionArr = (D2D1_ROUNDED_RECT*)calloc(m_solutionGrid->m_size, sizeof(D2D1_ROUNDED_RECT));
+            solutionArr = (D2D1_ROUNDED_RECT*)malloc(m_solutionGrid->m_size * sizeof(D2D1_ROUNDED_RECT));
 
             for (int i = 0; i < m_solutionGrid->m_size; i++) 
             {
