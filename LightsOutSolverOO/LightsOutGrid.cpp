@@ -4,8 +4,7 @@ LightsOutGrid::LightsOutGrid(HWND hwnd, int n, int xPos, int yPos) :
 	m_hwnd(hwnd),
 	m_n(n),
 	m_xPos(xPos),
-	m_yPos(yPos),
-	m_buttonOnArr()
+	m_yPos(yPos)
 {
 	initializeButtonOnArr();
 	initializeButtonPosArr();
