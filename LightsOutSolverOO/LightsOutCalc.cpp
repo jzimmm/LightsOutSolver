@@ -6,7 +6,7 @@ LightsOutCalc::LightsOutCalc(const int n, const int m) : m_n(n), m_m(m), m_butto
 }
 
 LightsOutCalc::~LightsOutCalc() {
-	delete[] m_buttonRepMat;
+	free((int*)m_buttonRepMat);
 	deleteSolutionMat();
 	return;
 }
@@ -18,14 +18,14 @@ int* LightsOutCalc::solve(int* startVect) {
 	if (checkIsSolvable())
 		solution = createSolutionVect();
 
-	delete[] startVect;
+	free(startVect);
 	deleteSolutionMat();
 	m_solutionMat = nullptr;
 	return solution;
 }
 
 int** LightsOutCalc::createSolutionMat(int* startVect) {
-	int** tempMat = new int* [m_size];
+	int** tempMat = (int**)malloc(m_size * sizeof(int*));
 
 	if (startVect) {
 		for (int i = 0; i < m_size; i++) {
@@ -45,7 +45,7 @@ int** LightsOutCalc::createSolutionMat(int* startVect) {
 
 const int* const LightsOutCalc::createButtonRepMat() {
 	int moveVect[5] = { 0, -1, -m_m, 1, m_m };
-	int* resultMat = new int[(int)pow(m_size, 2)]();
+	int* resultMat = (int*)calloc((int)pow(m_size, 2), sizeof(int));
 	for (int i = 0; i < m_size; i++) {
 		for (int j = 0; j < 5; j++) {
 			int moveVal = i + moveVect[j];
@@ -123,7 +123,7 @@ int LightsOutCalc::mod2Add(int value1, int value2) {
 }
 
 int* LightsOutCalc::createSolutionVect() {
-	int* solutionVect = new int[m_size];
+	int* solutionVect = (int*)malloc(m_size * sizeof(int));
 	for (int i = 0; i < m_size; i++)
 		solutionVect[i] = m_solutionMat[i][m_size];
 	return solutionVect;
@@ -142,11 +142,11 @@ void LightsOutCalc::checkIsAlwaysSolvable() {
 		if (!total)
 		{
 			m_isAlwaysSolvable = false;
-			delete[] tempMat;
+			free(tempMat);
 			return;
 		}
 	}
-	delete[] tempMat;
+	free(tempMat);
 	return;
 }
 
@@ -173,8 +173,8 @@ bool LightsOutCalc::checkIsSolvable()
 void LightsOutCalc::deleteSolutionMat() {
 	if (m_solutionMat) {
 		for (int i = 0; i < m_size; i++) {
-			delete[] m_solutionMat[i];
+			free(m_solutionMat[i]);
 		}
-		delete[] m_solutionMat;
+		free(m_solutionMat);
 	}
 }

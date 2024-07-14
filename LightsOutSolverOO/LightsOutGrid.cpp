@@ -12,11 +12,11 @@ LightsOutGrid::LightsOutGrid(HWND hwnd, int n, int xPos, int yPos) :
 }
 
 LightsOutGrid::~LightsOutGrid() {
-	delete[] m_buttonOnArr;
+	free(m_buttonOnArr);
 	for (int i = 0; i < m_size; i++) {
-		delete[] m_buttonPosArr[i];
+		free((float*)m_buttonPosArr[i]);
 	}
-	delete[] m_buttonPosArr;
+	free((float**)m_buttonPosArr);
 }
 
 void LightsOutGrid::initializeButtonOnArr() {
@@ -62,7 +62,7 @@ void LightsOutGrid::initializeButtonPosArr() {
 void LightsOutGrid::clearGrid() {
 	int* temp = m_buttonOnArr;
 	initializeButtonOnArr();
-	delete[] temp;
+	free(temp);
 
 }
 
@@ -83,5 +83,5 @@ int* LightsOutGrid::getButtonOnArrByValInver() {
 void LightsOutGrid::setButtonOnArr(int* vect) {
 	int* temp = m_buttonOnArr;
 	m_buttonOnArr = vect;
-	delete[] temp;
+	free(temp);
 }
