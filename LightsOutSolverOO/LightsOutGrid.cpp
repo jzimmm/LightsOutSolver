@@ -1,28 +1,30 @@
 #include "LightsOutGrid.h"
 
-LightsOutGrid::LightsOutGrid(HWND hwnd, int n, int xPos, int yPos) :
+LightsOutGrid::LightsOutGrid(HWND hwnd, int n, int buttonSize, int spacing, int xPos, int yPos) :
 	m_hwnd(hwnd),
 	m_n(n),
+	m_size(n * n),
+	m_buttonSize(buttonSize),
+	m_spacing(spacing),
 	m_xPos(xPos),
-	m_yPos(yPos)
-{
-	initializeButtonOnArr();
-	initializeButtonPosArr();
-}
+	m_yPos(yPos),
+	m_buttonStateVect(initButtonStateVect()),
+	m_buttonPosMat(initButtonPosMat())
+{}
 
 LightsOutGrid::~LightsOutGrid() {
-	free(m_buttonOnArr);
+	free(m_buttonStateVect);
 	for (int i = 0; i < m_size; i++) {
-		free((float*)m_buttonPosArr[i]);
+		free((float*)m_buttonPosMat[i]);
 	}
-	free((float**)m_buttonPosArr);
+	free((float**)m_buttonPosMat);
 }
 
-void LightsOutGrid::initializeButtonOnArr() {
-	m_buttonOnArr = (int*)calloc(m_size, sizeof(int));
+int* LightsOutGrid::initButtonStateVect() {
+	return (int*)calloc(m_size, sizeof(int));
 }
 
-void LightsOutGrid::initializeButtonPosArr() {
+float const* const* LightsOutGrid::initButtonPosMat() {
 
 	const float rowTopStart = m_yPos - (((m_buttonSize * m_n) + (m_spacing * (m_n - 1))) / 2);
 	const float columnLeftStart = m_xPos - (((m_buttonSize * m_n) + (m_spacing * (m_n - 1))) / 2);
@@ -55,32 +57,29 @@ void LightsOutGrid::initializeButtonPosArr() {
 		rowTop = rowTopStart + ((m_buttonSize + m_spacing) * (i + 1));
 	}
 
-	m_buttonPosArr = tempArr;
+	return tempArr;
 }
 
 void LightsOutGrid::clearGrid() {
-	int* temp = m_buttonOnArr;
-	initializeButtonOnArr();
-	free(temp);
-
+	memset(m_buttonStateVect, 0, m_size * sizeof(int));
 }
 
-int* LightsOutGrid::getButtonOnArrByVal() {
+int* LightsOutGrid::getButtonStateVectVal() {
 	int* result = (int*)malloc(m_size * sizeof(int));
-	memcpy_s(result, sizeof(int) * m_size, m_buttonOnArr, sizeof(int) * m_size);
+	memcpy_s(result, sizeof(int) * m_size, m_buttonStateVect, sizeof(int) * m_size);
 	return result;
 }
 
-int* LightsOutGrid::getButtonOnArrByValInver() {
+int* LightsOutGrid::getButtonStateVectValInvert() {
 	int* result = (int*)malloc(m_size * sizeof(int));
 	for (int i = 0; i < m_size; i++) {
-		result[i] = !m_buttonOnArr[i];
+		result[i] = !m_buttonStateVect[i];
 	}
 	return result;
 }
 
-void LightsOutGrid::setButtonOnArr(int* vect) {
-	int* temp = m_buttonOnArr;
-	m_buttonOnArr = vect;
+void LightsOutGrid::setButtonStateVect(int* vect) {
+	int* temp = m_buttonStateVect;
+	m_buttonStateVect = vect;
 	free(temp);
 }

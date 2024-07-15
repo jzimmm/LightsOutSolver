@@ -1,51 +1,55 @@
 #include "LightsOutCalc.h"
 
-LightsOutCalc::LightsOutCalc(const int n, const int m) : m_n(n), m_m(m), m_buttonRepMat(createButtonRepMat()) {
-	m_solutionMat = nullptr;
-	checkIsAlwaysSolvable();
+LightsOutCalc::LightsOutCalc(const int n, const int m) : 
+	m_n(n), 
+	m_m(m), 
+	m_size(n * m),
+	m_buttonMapVect(createButtonMapVect()),
+	m_solutionMat(nullptr)
+{
+	m_isAlwaysSolvable = checkIsAlwaysSolvable();
 }
 
 LightsOutCalc::~LightsOutCalc() {
-	free((int*)m_buttonRepMat);
+	free((int*)m_buttonMapVect);
 	deleteSolutionMat();
 	return;
 }
 
 int* LightsOutCalc::solve(int* startVect) {
-	int* solution = nullptr;
-
-	m_solutionMat = gaussJordanElim(startVect);
-	if (checkIsSolvable())
-		solution = createSolutionVect();
-
-	free(startVect);
-	deleteSolutionMat();
-	m_solutionMat = nullptr;
-	return solution;
+	if (!m_solutionMat)
+		initSolutionMat();
+	createSolutionMat(startVect);
+	gaussJordanElim(m_solutionMat, m_size + 1);
+	return checkIsSolvable() ? createSolutionVect() : nullptr;
 }
 
-int** LightsOutCalc::createSolutionMat(int* startVect) {
-	int** tempMat = (int**)malloc(m_size * sizeof(int*));
-
-	if (startVect) {
-		for (int i = 0; i < m_size; i++) {
-			tempMat[i] = (int*)malloc((m_size + 1) * sizeof(int));
-			memcpy_s(tempMat[i], (m_size + 1) * sizeof(int), m_buttonRepMat + (i * m_size), (m_size) * sizeof(int));
-			tempMat[i][m_size] = startVect[i];
-		}
+void LightsOutCalc::initSolutionMat() {
+	m_solutionMat = (int**)malloc(m_size * sizeof(int*));
+	for (int i = 0; i < m_size; i++) {
+		m_solutionMat[i] = (int*)malloc((m_size + 1) * sizeof(int));
 	}
-	else {
-		for (int i = 0; i < m_size; i++) {
-			tempMat[i] = (int*)malloc(m_size * sizeof(int));
-			memcpy_s(tempMat[i], m_size * sizeof(int), m_buttonRepMat + (i * m_size), m_size * sizeof(int));
-		}
+}
+
+void LightsOutCalc::createSolutionMat(int* startVect) {
+	for (int i = 0; i < m_size; i++) {
+		memcpy_s(m_solutionMat[i], (m_size + 1) * sizeof(int), m_buttonMapVect + (i * m_size), (m_size) * sizeof(int));
+		m_solutionMat[i][m_size] = startVect[i];
+	}
+}
+
+int** LightsOutCalc::createSolutionMat() {
+	int** tempMat = (int**)malloc(m_size * sizeof(int*));
+	for (int i = 0; i < m_size; i++) {
+		tempMat[i] = (int*)malloc(m_size * sizeof(int));
+		memcpy_s(tempMat[i], m_size * sizeof(int), m_buttonMapVect + (i * m_size), m_size * sizeof(int));
 	}
 	return tempMat;
 }
 
-const int* const LightsOutCalc::createButtonRepMat() {
+const int* const LightsOutCalc::createButtonMapVect() {
 	int moveVect[5] = { 0, -1, -m_m, 1, m_m };
-	int* resultMat = (int*)calloc((int)pow(m_size, 2), sizeof(int));
+	int* resultMat = (int*)calloc(m_size * m_size, sizeof(int));
 	for (int i = 0; i < m_size; i++) {
 		for (int j = 0; j < 5; j++) {
 			int moveVal = i + moveVect[j];
@@ -61,38 +65,22 @@ const int* const LightsOutCalc::createButtonRepMat() {
 	return resultMat;
 }
 
-void LightsOutCalc::invertVect(int* vect) {
-	for (int i = 0; i < m_size; i++) {
-		if (vect[i] == 0) {
-			vect[i] = 1;
-		}
-		else {
-			vect[i] = 0;
-		}
-	}
-	return;
-}
-
-int** LightsOutCalc::gaussJordanElim(int* startVect) {
-	int** tempMat = createSolutionMat(startVect);
-	int rowSize = startVect ? m_size + 1 : m_size;
-
+void LightsOutCalc::gaussJordanElim(int** destMat, int rowSize) {
 	// Column by column
 	for (int i = 0; i < m_size; i++) {
-		if (tempMat[i][i] != 1) {
-			int rowWith1 = findRowWith1(tempMat, i);
+		if (destMat[i][i] != 1) {
+			int rowWith1 = findRowWith1(destMat, i);
 			if (rowWith1 < 0)
 				continue;
-			swapRows(tempMat, i, rowWith1);
+			swapRows(destMat, i, rowWith1);
 		}
 		// Row by row
 		for (int j = 0; j < m_size; j++) {
-			if (i == j || tempMat[j][i] == 0)
+			if (i == j || destMat[j][i] == 0)
 				continue;
-			addRows(tempMat, rowSize, i, j);
+			addRows(destMat, rowSize, i, j);
 		}
 	}
-	return tempMat;
 }
 
 int LightsOutCalc::findRowWith1(int** mat, int col) {
@@ -129,9 +117,9 @@ int* LightsOutCalc::createSolutionVect() {
 	return solutionVect;
 }
 
-void LightsOutCalc::checkIsAlwaysSolvable() {
-	int** tempMat = gaussJordanElim();
-
+bool LightsOutCalc::checkIsAlwaysSolvable() {
+	int** tempMat = createSolutionMat();
+	gaussJordanElim(tempMat, m_size);
 	for (int i = 0; i < m_size; i++)
 	{
 		int total = 0;
@@ -141,17 +129,15 @@ void LightsOutCalc::checkIsAlwaysSolvable() {
 		}
 		if (!total)
 		{
-			m_isAlwaysSolvable = false;
 			free(tempMat);
-			return;
+			return false;
 		}
 	}
 	free(tempMat);
-	return;
+	return true;
 }
 
-bool LightsOutCalc::checkIsSolvable() 
-{
+bool LightsOutCalc::checkIsSolvable() {
 	if (m_isAlwaysSolvable)
 		return true;
 

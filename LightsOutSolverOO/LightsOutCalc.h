@@ -6,9 +6,9 @@ class LightsOutCalc {
 private:
 	const int m_n;
 	const int m_m;
-	const int m_size = m_n * m_m;
-	bool m_isAlwaysSolvable = true;
-	const int* const m_buttonRepMat;
+	const int m_size;
+	bool m_isAlwaysSolvable;
+	const int* const m_buttonMapVect;
 	int** m_solutionMat;
 
 public:
@@ -17,16 +17,17 @@ public:
 	int* solve(int* startVect);
 
 private:
-	int** createSolutionMat(int* startVect);
-	const int* const createButtonRepMat();
-	void invertVect(int* vect);
-	int** gaussJordanElim(int* startVect = nullptr);
+	void initSolutionMat();
+	void createSolutionMat(int* startVect);
+	int** createSolutionMat();
+	const int* const createButtonMapVect();
+	void gaussJordanElim(int** resultMat, int rowSize);
 	int findRowWith1(int** mat, int col);
 	void swapRows(int** mat, int currentRow, int rowToSwap);
 	void addRows(int** mat, int rowSize, int currentRow, int rowToAdd);
 	int mod2Add(int value1, int value2);
 	int* createSolutionVect();
-	void checkIsAlwaysSolvable();
+	bool checkIsAlwaysSolvable();
 	bool checkIsSolvable();
 	void deleteSolutionMat();
 };

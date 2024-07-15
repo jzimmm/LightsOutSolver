@@ -7,24 +7,24 @@ class LightsOutGrid
 public:
 	const HWND m_hwnd;
 	const int m_n;
-	const int m_size = pow(m_n, 2);
-	const int m_buttonSize = 50;
+	const int m_size;
+	const int m_buttonSize;
 	const int m_xPos;
 	const int m_yPos;
-	const int m_spacing = 5;
-	int* m_buttonOnArr = nullptr;
-	float const * const * m_buttonPosArr = nullptr;
+	const int m_spacing;
+	int* m_buttonStateVect;
+	float const * const * m_buttonPosMat;
 
 public:
-	LightsOutGrid(HWND hWnd, int n, int xPos, int yPos);
+	LightsOutGrid(HWND hwnd, int n, int buttonSize, int spacing, int xPos, int yPos);
 	~LightsOutGrid();
 	void clearGrid();
-	int* getButtonOnArrByVal();
-	int* getButtonOnArrByValInver();
-	void setButtonOnArr(int* vect);
+	int* getButtonStateVectVal();
+	int* getButtonStateVectValInvert();
+	void setButtonStateVect(int* vect);
 
 private:
-	void initializeButtonOnArr();
-	void initializeButtonPosArr();
+	int* initButtonStateVect();
+	float const* const* initButtonPosMat();
 };
 

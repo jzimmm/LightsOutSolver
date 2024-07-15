@@ -61,7 +61,10 @@ private:
         LPARAM lParam
     );
 
+    void registerStaticControls(HWND hwnd);
     bool onGridClick(int xPos, int yPos);
+    void onGridSizeChange(TCHAR* listItem);
+    void onSolutionClick(int* gridState);
     int getGridSize(WCHAR* listItem);
     void refreshGrid(HWND hwnd, LightsOutGrid** grid, int n);
     void refreshCalc(int n);

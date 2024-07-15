@@ -12,6 +12,7 @@ MainWindow::MainWindow() :
     m_pRenderTarget(NULL),
     m_pLightSlateGrayBrush(NULL),
     m_pBlueBrush(NULL),
+    m_pGreenBrush(NULL),
     m_pWhiteBrush(NULL),
     m_pRedBrush(NULL),
     m_lightsOutCalc(NULL),
@@ -95,11 +96,11 @@ HRESULT MainWindow::Initialize()
             int xPos = (rc.right - rc.left) / 4;
             int yPos = (rc.bottom - rc.top) / 2.25;
 
-            m_lightsOutGrid = new LightsOutGrid(m_hwnd, 3, xPos, yPos);
+            m_lightsOutGrid = new LightsOutGrid(m_hwnd, 3, 50, 5, xPos, yPos);
 
             xPos += (rc.right - rc.left) / 2;
             
-            m_solutionGrid = new LightsOutGrid(m_hwnd, 3, xPos, yPos);
+            m_solutionGrid = new LightsOutGrid(m_hwnd, 3, 50, 5, xPos, yPos);
 
             UpdateWindow(m_hwnd);
         }
@@ -119,6 +120,133 @@ void MainWindow::RunMessageLoop()
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+}
+
+LRESULT CALLBACK MainWindow::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    LRESULT result = 0;
+
+    if (message == WM_CREATE)
+    {
+        LPCREATESTRUCT pcs = (LPCREATESTRUCT)lParam;
+        MainWindow* pMainWindow = (MainWindow*)pcs->lpCreateParams;
+
+        ::SetWindowLongPtrW(
+            hwnd,
+            GWLP_USERDATA,
+            reinterpret_cast<LONG_PTR>(pMainWindow)
+        );
+        pMainWindow->registerStaticControls(hwnd);
+        result = 1;
+    }
+    else
+    {
+        MainWindow* pMainWindow = reinterpret_cast<MainWindow*>(static_cast<LONG_PTR>(
+            ::GetWindowLongPtrW(
+                hwnd,
+                GWLP_USERDATA
+            )));
+
+        bool wasHandled = false;
+
+        if (pMainWindow)
+        {
+            switch (message)
+            {
+            case WM_COMMAND:
+                if (HIWORD(wParam) == CBN_SELCHANGE)
+                {
+                    int itemIndex = SendMessage((HWND)lParam, (UINT)CB_GETCURSEL,
+                        (WPARAM)0, (LPARAM)0);
+                    TCHAR  listItem[6];
+                    (TCHAR)SendMessage((HWND)lParam, (UINT)CB_GETLBTEXT,
+                        (WPARAM)itemIndex, (LPARAM)listItem);
+                    pMainWindow->onGridSizeChange(listItem);
+                    InvalidateRect(hwnd, NULL, FALSE);
+                }
+                else if (HIWORD(wParam) == BN_CLICKED)
+                {
+                    if (LOWORD(wParam) == BTN_CLEAR)
+                    {
+                        pMainWindow->m_lightsOutGrid->clearGrid();
+                    }
+                    else if (LOWORD(wParam == BTN_SOLUTION))
+                    {
+                        int* currentGridState = nullptr;
+                        if (IsDlgButtonChecked(hwnd, BTN_LIGHTS_ON) == BST_UNCHECKED)
+                        {
+                            currentGridState = pMainWindow->m_lightsOutGrid->getButtonStateVectVal();
+                            pMainWindow->onSolutionClick(currentGridState);
+                        }
+                        else
+                        {
+                            currentGridState = pMainWindow->m_lightsOutGrid->getButtonStateVectValInvert();
+                            pMainWindow->onSolutionClick(currentGridState);
+                        }
+                        free(currentGridState);
+                    }
+                    InvalidateRect(hwnd, NULL, false);
+                }
+
+                wasHandled = true;
+                result = 0;
+                break;
+
+            case WM_DISPLAYCHANGE:
+            {
+                InvalidateRect(hwnd, NULL, FALSE);
+            }
+            result = 0;
+            wasHandled = true;
+            break;
+
+            case WM_CTLCOLORSTATIC:
+            {
+                if ((HWND)lParam == GetDlgItem(hwnd, BTN_LIGHTS_ON))
+                {
+                    return (LRESULT)CreateSolidBrush(RGB(33, 33, 33));
+                }
+            }
+            break;
+            case WM_PAINT:
+            {
+                PAINTSTRUCT ps;
+                HDC hdc = BeginPaint(hwnd, &ps);
+                pMainWindow->OnRender(ps);
+                EndPaint(hwnd, &ps);
+                ValidateRect(hwnd, NULL);
+            }
+            result = 0;
+            wasHandled = true;
+            break;
+            case WM_LBUTTONUP:
+            {
+                if (pMainWindow->onGridClick(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)))
+                {
+                    InvalidateRect(hwnd, NULL, FALSE);
+                }
+            }
+            result = 0;
+            wasHandled = true;
+            break;
+
+            case WM_DESTROY:
+            {
+                PostQuitMessage(0);
+            }
+            result = 1;
+            wasHandled = true;
+            break;
+            }
+        }
+
+        if (!wasHandled)
+        {
+            result = DefWindowProc(hwnd, message, wParam, lParam);
+        }
+    }
+
+    return result;
 }
 
 HRESULT MainWindow::CreateDeviceIndependentResources()
@@ -277,16 +405,16 @@ HRESULT MainWindow::OnRender(const PAINTSTRUCT &ps)
         {
             buttonArr[i] = D2D1::RoundedRect(
                 D2D1::RectF(
-                    m_lightsOutGrid->m_buttonPosArr[i][0],
-                    m_lightsOutGrid->m_buttonPosArr[i][1],
-                    m_lightsOutGrid->m_buttonPosArr[i][2],
-                    m_lightsOutGrid->m_buttonPosArr[i][3]
+                    m_lightsOutGrid->m_buttonPosMat[i][0],
+                    m_lightsOutGrid->m_buttonPosMat[i][1],
+                    m_lightsOutGrid->m_buttonPosMat[i][2],
+                    m_lightsOutGrid->m_buttonPosMat[i][3]
                 ),
                 5.f,
                 5.f
                );
 
-            if (!m_lightsOutGrid->m_buttonOnArr[i]) 
+            if (!m_lightsOutGrid->m_buttonStateVect[i]) 
             {
                 m_pRenderTarget->FillRoundedRectangle(&buttonArr[i], m_pLightSlateGrayBrush);
             }
@@ -305,16 +433,17 @@ HRESULT MainWindow::OnRender(const PAINTSTRUCT &ps)
             for (int i = 0; i < m_solutionGrid->m_size; i++) 
             {
                 solutionArr[i] = D2D1::RoundedRect(
-                    D2D1::RectF(m_solutionGrid->m_buttonPosArr[i][0],
-                        m_solutionGrid->m_buttonPosArr[i][1],
-                        m_solutionGrid->m_buttonPosArr[i][2],
-                        m_solutionGrid->m_buttonPosArr[i][3]
+                    D2D1::RectF(
+                        m_solutionGrid->m_buttonPosMat[i][0],
+                        m_solutionGrid->m_buttonPosMat[i][1],
+                        m_solutionGrid->m_buttonPosMat[i][2],
+                        m_solutionGrid->m_buttonPosMat[i][3]
                     ),
                     5.f,
                     5.f
                 );
 
-                if (!m_solutionGrid->m_buttonOnArr[i])
+                if (!m_solutionGrid->m_buttonStateVect[i])
                 {
                     m_pRenderTarget->FillRoundedRectangle(&solutionArr[i], m_pLightSlateGrayBrush);
                 }
@@ -362,235 +491,111 @@ void MainWindow::DiscardDeviceResources()
     SafeRelease(&m_pRenderTarget);
     SafeRelease(&m_pLightSlateGrayBrush);
     SafeRelease(&m_pBlueBrush);
+    SafeRelease(&m_pGreenBrush);
     SafeRelease(&m_pWhiteBrush);
     SafeRelease(&m_pRedBrush);
 }
 
-LRESULT CALLBACK MainWindow::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    LRESULT result = 0;
+void MainWindow::registerStaticControls(HWND hwnd) {
+    int buttonYPos = 320;
 
-    if (message == WM_CREATE)
-    {
-        LPCREATESTRUCT pcs = (LPCREATESTRUCT)lParam;
-        MainWindow* pMainWindow = (MainWindow*)pcs->lpCreateParams;
+    m_gridSizeCombo = CreateWindow(L"COMBOBOX", TEXT(""),
+        CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_CHILD | WS_VISIBLE,
+        20, buttonYPos, 80, 80, hwnd, NULL, HINST_THISCOMPONENT,
+        NULL);
 
-        ::SetWindowLongPtrW(
-            hwnd,
-            GWLP_USERDATA,
-            reinterpret_cast<LONG_PTR>(pMainWindow)
-        );
+    //ADD 2 ITEMS
+    SendMessage(
+        m_gridSizeCombo,
+        (UINT)CB_ADDSTRING,
+        (WPARAM)0, (LPARAM)TEXT("3 x 3"));
+    SendMessage(
+        m_gridSizeCombo,
+        (UINT)CB_ADDSTRING,
+        (WPARAM)0, (LPARAM)TEXT("5 x 5"));
+    SendMessage(m_gridSizeCombo, CB_SETCURSEL, (WPARAM)0, (LPARAM)0);
 
-        int buttonYPos = 320;
+    m_clearButton = CreateWindow(
+        L"BUTTON",  // Predefined class; Unicode assumed 
+        L"Clear",      // Button text 
+        WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,  // Styles 
+        159,         // x position 
+        buttonYPos,         // y position 
+        80,        // Button width
+        25,        // Button height
+        hwnd,     // Parent window
+        (HMENU)BTN_CLEAR,       // No menu.
+        (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE),
+        NULL);
 
-        pMainWindow->m_gridSizeCombo = CreateWindow(L"COMBOBOX", TEXT(""),
-            CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_CHILD | WS_VISIBLE,
-            20, buttonYPos, 80, 80, hwnd, NULL, HINST_THISCOMPONENT,
-            NULL);
+    m_solutionButton = CreateWindow(
+        L"BUTTON",  // Predefined class; Unicode assumed 
+        L"Solution",      // Button text 
+        WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,  // Styles 
+        345,         // x position 
+        buttonYPos,         // y position 
+        100,        // Button width
+        25,        // Button height
+        hwnd,     // Parent window
+        (HMENU)BTN_SOLUTION,       // No menu.
+        (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE),
+        NULL);
 
-        //ADD 2 ITEMS
-        SendMessage(
-            pMainWindow->m_gridSizeCombo,
-            (UINT)CB_ADDSTRING,
-            (WPARAM)0, (LPARAM)TEXT("3 x 3"));
-        SendMessage(
-            pMainWindow->m_gridSizeCombo,
-            (UINT)CB_ADDSTRING,
-            (WPARAM)0, (LPARAM)TEXT("5 x 5"));
-        SendMessage(pMainWindow->m_gridSizeCombo, CB_SETCURSEL, (WPARAM)0, (LPARAM)0);
-
-        pMainWindow->m_clearButton = CreateWindow(
-            L"BUTTON",  // Predefined class; Unicode assumed 
-            L"Clear",      // Button text 
-            WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,  // Styles 
-            159,         // x position 
-            buttonYPos,         // y position 
-            80,        // Button width
-            25,        // Button height
-            hwnd,     // Parent window
-            (HMENU)BTN_CLEAR,       // No menu.
-            (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE),
-            NULL);
-
-        pMainWindow->m_solutionButton = CreateWindow(
-            L"BUTTON",  // Predefined class; Unicode assumed 
-            L"Solution",      // Button text 
-            WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,  // Styles 
-            345,         // x position 
-            buttonYPos,         // y position 
-            100,        // Button width
-            25,        // Button height
-            hwnd,     // Parent window
-            (HMENU)BTN_SOLUTION,       // No menu.
-            (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE),
-            NULL);
-
-        pMainWindow->m_lightsOnCheck = CreateWindow(
-            L"BUTTON",
-            L"",
-            BS_AUTOCHECKBOX | WS_VISIBLE | WS_CHILD,
-            650,
-            buttonYPos + 2,
-            15,
-            20,
-            hwnd,
-            (HMENU)BTN_LIGHTS_ON,
-            (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE),
-            NULL);
-
-        result = 1;
-    }
-    else 
-    {
-
-        MainWindow* pMainWindow = reinterpret_cast<MainWindow*>(static_cast<LONG_PTR>(
-            ::GetWindowLongPtrW(
-                hwnd,
-                GWLP_USERDATA
-            )));
-
-        bool wasHandled = false;
-
-        if (pMainWindow)
-        {
-            switch (message)
-            {
-            case WM_COMMAND:
-                if (HIWORD(wParam) == CBN_SELCHANGE)
-                {
-                    int itemIndex = SendMessage((HWND)lParam, (UINT)CB_GETCURSEL,
-                        (WPARAM)0, (LPARAM)0);
-                    TCHAR  listItem[6];
-                    (TCHAR)SendMessage((HWND)lParam, (UINT)CB_GETLBTEXT,
-                        (WPARAM)itemIndex, (LPARAM)listItem);
-                    pMainWindow->refreshGrid(hwnd, &pMainWindow->m_lightsOutGrid, pMainWindow->getGridSize(listItem));
-                    pMainWindow->refreshGrid(hwnd, &pMainWindow->m_solutionGrid, pMainWindow->getGridSize(listItem));
-                    pMainWindow->refreshCalc(pMainWindow->getGridSize(listItem));
-                    pMainWindow->m_displaySolution = false;
-                    pMainWindow->m_displayNoSolution = false;
-                    InvalidateRect(hwnd, NULL, FALSE);
-                }
-                else if (HIWORD(wParam) == BN_CLICKED)
-                {
-                    if (LOWORD(wParam) == BTN_CLEAR)
-                    {
-                        pMainWindow->m_lightsOutGrid->clearGrid();
-                    }
-                    else if (LOWORD(wParam == BTN_SOLUTION))
-                    {
-                        if (IsDlgButtonChecked(hwnd, BTN_LIGHTS_ON) == BST_UNCHECKED)
-                        {
-                            int* solution = pMainWindow->m_lightsOutCalc->solve(pMainWindow->m_lightsOutGrid->getButtonOnArrByVal());
-                            if (solution)
-                            {
-                                pMainWindow->m_solutionGrid->setButtonOnArr(solution);
-                                pMainWindow->m_displaySolution = true;
-                                pMainWindow->m_displayNoSolution = false;
-                            }
-                            else
-                            {
-                                pMainWindow->m_displayNoSolution = true;
-                                pMainWindow->m_displaySolution = false;
-                            }
-                        }
-                        else
-                        {
-                            int* solution = pMainWindow->m_lightsOutCalc->solve(pMainWindow->m_lightsOutGrid->getButtonOnArrByValInver());
-                            if (solution)
-                            {
-                                pMainWindow->m_solutionGrid->setButtonOnArr(solution);
-                                pMainWindow->m_displaySolution = true;
-                            }
-                            else
-                            {
-                                pMainWindow->m_displayNoSolution = true;
-                                pMainWindow->m_displaySolution = false;
-                            }
-                        }
-                    }
-
-                    InvalidateRect(hwnd, NULL, false);
-                }
-
-                wasHandled = true;
-                result = 0;
-                break;
-
-            case WM_DISPLAYCHANGE:
-            {
-                InvalidateRect(hwnd, NULL, FALSE);
-            }
-            result = 0;
-            wasHandled = true;
-            break;
-
-            case WM_CTLCOLORSTATIC:
-            {
-                if ((HWND)lParam == GetDlgItem(hwnd, BTN_LIGHTS_ON))
-                {
-                    return (LRESULT)CreateSolidBrush(RGB(33, 33, 33));
-                }
-            }
-            break;
-            case WM_PAINT:
-            {
-                PAINTSTRUCT ps;
-                HDC hdc = BeginPaint(hwnd, &ps);
-                pMainWindow->OnRender(ps);
-                EndPaint(hwnd, &ps);
-                ValidateRect(hwnd, NULL);
-            }
-            result = 0;
-            wasHandled = true;
-            break;
-            case WM_LBUTTONUP:
-            {
-                if (pMainWindow->onGridClick(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)))
-                {
-                    InvalidateRect(hwnd, NULL, FALSE);
-                }
-            }
-            result = 0;
-            wasHandled = true;
-            break;
-
-            case WM_DESTROY:
-            {
-                PostQuitMessage(0);
-            }
-            result = 1;
-            wasHandled = true;
-            break;
-            }
-        }
-
-        if (!wasHandled)
-        {
-            result = DefWindowProc(hwnd, message, wParam, lParam);
-        }
-    }
-
-    return result;
+    m_lightsOnCheck = CreateWindow(
+        L"BUTTON",
+        L"",
+        BS_AUTOCHECKBOX | WS_VISIBLE | WS_CHILD,
+        650,
+        buttonYPos + 2,
+        15,
+        20,
+        hwnd,
+        (HMENU)BTN_LIGHTS_ON,
+        (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE),
+        NULL);
 }
 
 bool MainWindow::onGridClick(int xPos, int yPos) {
-
-    if (xPos < m_lightsOutGrid->m_buttonPosArr[0][0] || xPos > m_lightsOutGrid->m_buttonPosArr[m_lightsOutGrid->m_n - 1][2])
+    //Check if outside button grid
+    if (xPos < m_lightsOutGrid->m_buttonPosMat[0][0] || xPos > m_lightsOutGrid->m_buttonPosMat[m_lightsOutGrid->m_n - 1][2])
     {
-        if (yPos < m_lightsOutGrid->m_buttonPosArr[0][1] || yPos > m_lightsOutGrid->m_buttonPosArr[m_lightsOutGrid->m_size - 1][3])
+        if (yPos < m_lightsOutGrid->m_buttonPosMat[0][1] || yPos > m_lightsOutGrid->m_buttonPosMat[m_lightsOutGrid->m_size - 1][3])
             return false;
     }
 
     for (int i = 0; i < m_lightsOutGrid->m_size; i++) {
-        if (xPos > m_lightsOutGrid->m_buttonPosArr[i][0] && yPos > m_lightsOutGrid->m_buttonPosArr[i][1]) {
-            if (xPos < m_lightsOutGrid->m_buttonPosArr[i][2] && yPos < m_lightsOutGrid->m_buttonPosArr[i][3])
+        if (xPos > m_lightsOutGrid->m_buttonPosMat[i][0] && yPos > m_lightsOutGrid->m_buttonPosMat[i][1]) {
+            if (xPos < m_lightsOutGrid->m_buttonPosMat[i][2] && yPos < m_lightsOutGrid->m_buttonPosMat[i][3])
             {
-                m_lightsOutGrid->m_buttonOnArr[i] = !m_lightsOutGrid->m_buttonOnArr[i];
+                m_lightsOutGrid->m_buttonStateVect[i] = !m_lightsOutGrid->m_buttonStateVect[i];
                 return true;
             }
         }
     }
     return false;
+}
+
+void MainWindow::onGridSizeChange(TCHAR* listItem) {
+    refreshGrid(m_hwnd, &m_lightsOutGrid, getGridSize(listItem));
+    refreshGrid(m_hwnd, &m_solutionGrid, getGridSize(listItem));
+    refreshCalc(getGridSize(listItem));
+    m_displaySolution = false;
+    m_displayNoSolution = false;
+}
+
+void MainWindow::onSolutionClick(int* gridState) {
+    int* solution = m_lightsOutCalc->solve(gridState);
+    if (solution)
+    {
+        m_solutionGrid->setButtonStateVect(solution);
+        m_displaySolution = true;
+        m_displayNoSolution = false;
+    }
+    else
+    {
+        m_displayNoSolution = true;
+        m_displaySolution = false;
+    }
 }
 
 int MainWindow::getGridSize(WCHAR* listItem) {
@@ -602,7 +607,7 @@ int MainWindow::getGridSize(WCHAR* listItem) {
 
 void MainWindow::refreshGrid(HWND hwnd, LightsOutGrid** grid, int n) {
     LightsOutGrid* temp = *grid;
-    *grid = new LightsOutGrid(hwnd, n, temp->m_xPos, temp->m_yPos);
+    *grid = new LightsOutGrid(hwnd, n, temp->m_buttonSize, temp->m_spacing, temp->m_xPos, temp->m_yPos);
     delete temp;
 }
 
