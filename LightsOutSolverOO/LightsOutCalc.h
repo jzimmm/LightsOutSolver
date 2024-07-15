@@ -17,7 +17,7 @@ public:
 	int* solve(int* startVect);
 
 private:
-	void initSolutionMat();
+	int** initSolutionMat();
 	void createSolutionMat(int* startVect);
 	int** createSolutionMat();
 	const int* const createButtonMapVect();

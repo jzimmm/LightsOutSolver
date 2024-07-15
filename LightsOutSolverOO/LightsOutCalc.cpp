@@ -5,7 +5,7 @@ LightsOutCalc::LightsOutCalc(const int n, const int m) :
 	m_m(m), 
 	m_size(n * m),
 	m_buttonMapVect(createButtonMapVect()),
-	m_solutionMat(nullptr)
+	m_solutionMat(initSolutionMat())
 {
 	m_isAlwaysSolvable = checkIsAlwaysSolvable();
 }
@@ -17,18 +17,17 @@ LightsOutCalc::~LightsOutCalc() {
 }
 
 int* LightsOutCalc::solve(int* startVect) {
-	if (!m_solutionMat)
-		initSolutionMat();
 	createSolutionMat(startVect);
 	gaussJordanElim(m_solutionMat, m_size + 1);
 	return checkIsSolvable() ? createSolutionVect() : nullptr;
 }
 
-void LightsOutCalc::initSolutionMat() {
-	m_solutionMat = (int**)malloc(m_size * sizeof(int*));
+int** LightsOutCalc::initSolutionMat() {
+	int** tempMat = (int**)malloc(m_size * sizeof(int*));
 	for (int i = 0; i < m_size; i++) {
-		m_solutionMat[i] = (int*)malloc((m_size + 1) * sizeof(int));
+		tempMat[i] = (int*)malloc((m_size + 1) * sizeof(int));
 	}
+	return tempMat;
 }
 
 void LightsOutCalc::createSolutionMat(int* startVect) {
