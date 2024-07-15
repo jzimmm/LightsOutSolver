@@ -12,8 +12,10 @@ LightsOutCalc::LightsOutCalc(const int n, const int m) :
 
 LightsOutCalc::~LightsOutCalc() {
 	free((int*)m_buttonMapVect);
-	deleteSolutionMat();
-	return;
+	for (int i = 0; i < m_size; i++) {
+		free(m_solutionMat[i]);
+	}
+	free(m_solutionMat);
 }
 
 int* LightsOutCalc::solve(int* startVect) {
@@ -94,14 +96,12 @@ void LightsOutCalc::swapRows(int** mat, int currentRow, int rowToSwap) {
 	int* tempRow = mat[currentRow];
 	mat[currentRow] = mat[rowToSwap];
 	mat[rowToSwap] = tempRow;
-	return;
 }
 
 void LightsOutCalc::addRows(int** mat, int rowSize, int currentRow, int rowToAdd) {
 	for (int i = 0; i < rowSize; i++) {
 		mat[rowToAdd][i] = mod2Add(mat[rowToAdd][i], mat[currentRow][i]);
 	}
-	return;
 }
 
 int LightsOutCalc::mod2Add(int value1, int value2) {
@@ -153,13 +153,4 @@ bool LightsOutCalc::checkIsSolvable() {
 		}
 	}
 	return true;
-}
-
-void LightsOutCalc::deleteSolutionMat() {
-	if (m_solutionMat) {
-		for (int i = 0; i < m_size; i++) {
-			free(m_solutionMat[i]);
-		}
-		free(m_solutionMat);
-	}
 }

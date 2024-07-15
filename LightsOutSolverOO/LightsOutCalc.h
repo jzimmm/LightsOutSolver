@@ -29,6 +29,5 @@ private:
 	int* createSolutionVect();
 	bool checkIsAlwaysSolvable();
 	bool checkIsSolvable();
-	void deleteSolutionMat();
 };
 
